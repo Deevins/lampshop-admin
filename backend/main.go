@@ -9,25 +9,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ---------------------------------------------------
-//     Типы (модели) из фронтенда, но на Go
-// ---------------------------------------------------
 
-// Category — соответствует списку категорий товаров
 type Category struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
 // AttributeOption — описание доступного атрибута в категории
-// Аналогично фронтовому { key, label, type }
 type AttributeOption struct {
 	Key   string `json:"key"`
 	Label string `json:"label"`
-	Type  string `json:"type"` // "text" или "number"
+	Type  string `json:"type"`
 }
 
-// Product — модель товара, где Attributes хранится как JSONB (map[string]interface{})
 type Product struct {
 	ID          int                    `json:"id"`
 	SKU         string                 `json:"sku"`
@@ -70,7 +64,6 @@ type Order struct {
 	UpdatedAt    time.Time   `json:"updatedAt"`
 }
 
-// UpdateStatusRequest — тело запроса для изменения статуса заказа
 type UpdateStatusRequest struct {
 	Status OrderStatus `json:"status"`
 }
