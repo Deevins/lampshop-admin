@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gin-contrib/cors"
 	"net/http"
 	"strconv"
 	"sync"
@@ -127,7 +128,7 @@ func init() {
 		Description: "Энергоэффективная лампочка для дома.",
 		CategoryID:  "bulb",
 		IsActive:    true,
-		ImageURL:    "https://via.placeholder.com/100?text=EcoBright+7W",
+		ImageURL:    "https://santhimetaleshop.in/cdn/shop/files/Untitleddesign_26a5d7f4-82b7-4e7a-ac43-068a31086beb.png?v=1694498000&width=1445",
 		Price:       500,
 		StockQty:    20,
 		Attributes: map[string]interface{}{
@@ -179,6 +180,15 @@ func main() {
 	// ========== Просмотр и изменение статуса заказов ==========
 	router.GET("/orders", getOrdersHandler)
 	router.PUT("/orders/:id/status", updateOrderStatusHandler)
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Запускаем на порту 8080
 	router.Run(":8080")
