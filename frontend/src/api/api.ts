@@ -1,4 +1,4 @@
-import axios, {type AxiosRequestConfig, type AxiosResponse} from "axios";
+import axios, {type AxiosResponse, type InternalAxiosRequestConfig} from "axios";
 
 
 export const BASE_URL = "http://localhost:8080";
@@ -8,12 +8,13 @@ export const BASE_URL = "http://localhost:8080";
 export const axiosInstance = axios.create();
 
 // Интерцептор: если в localStorage есть jwtToken, кладём его в заголовок Authorization
-// @ts-ignore
 axiosInstance.interceptors.request.use(
-    (config: AxiosRequestConfig) => {
+    (config: InternalAxiosRequestConfig) => {
         const token = localStorage.getItem("jwtToken");
-        if (token && config.headers) {
-            config.headers["Authorization"] = `Bearer ${token}`;
+        if (token) {
+            // Гарантируем, что headers не undefined
+            config.headers = config.headers ?? {};
+            config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
