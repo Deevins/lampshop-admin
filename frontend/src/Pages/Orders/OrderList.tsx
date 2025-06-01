@@ -7,27 +7,78 @@ const statuses: OrderStatus[] = [
     "Pending",
     "Processing",
     "Shipped",
-    "Delivered"
+    "Delivered",
 ];
+
+interface Notification {
+    message: string;
+    type: "success" | "error";
+    visible: boolean;
+}
 
 const OrderList: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
+    const [notification, setNotification] = useState<Notification>({
+        message: "",
+        type: "success",
+        visible: false,
+    });
 
     const fetchOrders = async () => {
-        const data = await getOrders();
-        setOrders(data);
+        try {
+            const data = await getOrders();
+            setOrders(data);
+        } catch (err) {
+            console.error("Error fetching orders:", err);
+            setNotification({
+                message: "Ошибка при загрузке заказов",
+                type: "error",
+                visible: true,
+            });
+        }
     };
 
     useEffect(() => {
         fetchOrders();
     }, []);
 
+    useEffect(() => {
+        if (notification.visible) {
+            const timer = setTimeout(() => {
+                setNotification((prev) => ({ ...prev, visible: false }));
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification.visible]);
+
     const handleStatusChange = async (
         orderId: number,
         newStatus: OrderStatus
     ) => {
-        await updateOrderStatus(orderId, newStatus);
-        await fetchOrders();
+        try {
+            const updated = await updateOrderStatus(orderId, newStatus);
+            if (updated) {
+                setNotification({
+                    message: `Статус заказа #${orderId} обновлён: ${newStatus}`,
+                    type: "success",
+                    visible: true,
+                });
+                fetchOrders();
+            } else {
+                setNotification({
+                    message: `Не удалось обновить статус заказа #${orderId}`,
+                    type: "error",
+                    visible: true,
+                });
+            }
+        } catch (err) {
+            console.error("Error updating order status:", err);
+            setNotification({
+                message: `Ошибка при обновлении статуса #${orderId}`,
+                type: "error",
+                visible: true,
+            });
+        }
     };
 
     return (
@@ -76,6 +127,18 @@ const OrderList: React.FC = () => {
                 ))}
                 </tbody>
             </table>
+
+            {notification.visible && (
+                <div
+                    className={`${styles.notification} ${
+                        notification.type === "success"
+                            ? styles.success
+                            : styles.error
+                    }`}
+                >
+                    {notification.message}
+                </div>
+            )}
         </div>
     );
 };

@@ -1,31 +1,41 @@
+import type {Category} from "../types/Product.ts";
+import {type AttributeOption, BASE_URL, handleResponse} from "./api.ts";
+import axios from "axios";
 import type {Order, OrderStatus} from "../types/Order.ts";
-import {delay} from "../utils/delay.ts";
 
+export const getCategories = async (): Promise<Category[]> => {
+    return handleResponse<Category[]>(
+        axios.get(`${BASE_URL}/categories`)
+    );
+};
 
-
-let orders: Order[] = [
-    {
-        id: 1,
-        customerName: "Иван Иванов",
-        items: [{ productId: 1, quantity: 2 }],
-        totalPrice: 1000,
-        status: "Pending"
-    }
-];
-
+export const getAttributeOptions = async (
+    categoryId: string
+): Promise<AttributeOption[]> => {
+    return handleResponse<AttributeOption[]>(
+        axios.get(`${BASE_URL}/categories/${encodeURIComponent(categoryId)}/attributes`)
+    );
+};
 
 export const getOrders = async (): Promise<Order[]> => {
-    await delay(300);
-    return [...orders];
+    return handleResponse<Order[]>(
+        axios.get(`${BASE_URL}/orders`)
+    );
 };
 
 export const updateOrderStatus = async (
     id: number,
     status: OrderStatus
-): Promise<Order | null> => {
-    await delay(200);
-    const idx = orders.findIndex((o) => o.id === id);
-    if (idx === -1) return null;
-    orders[idx].status = status;
-    return { ...orders[idx] };
+): Promise<Order> => {
+    return handleResponse<Order>(
+        axios.put(
+            `${BASE_URL}/orders/${id}/status`,
+            {status},
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }
+        )
+    );
 };

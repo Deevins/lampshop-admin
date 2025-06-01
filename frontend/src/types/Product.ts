@@ -1,3 +1,14 @@
+export interface Category {
+    id: string;
+    name: string;
+}
+
+export interface AttributeOption {
+    key: string;
+    label: string;
+    type: "text" | "number";
+}
+
 export interface Product {
     id: number;
     sku: string;
@@ -11,10 +22,4 @@ export interface Product {
     attributes: Record<string, string | number>;
     createdAt?: string;
     updatedAt?: string;
-}
-
-
-export interface Category {
-    id: string;
-    name: string;
 }

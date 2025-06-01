@@ -1,26 +1,55 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// src/pages/Products/ProductList.tsx
+
+import React, {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
+
 import styles from "./ProductList.module.scss";
-import type {Product} from "../../types/Product.ts";
 import {deleteProduct, getProducts} from "../../api/ProductApi.ts";
+import type {Category, Product} from "../../types/Product.ts";
+import {getCategories} from "../../api/OrderApi.ts";
 
 const ProductList: React.FC = () => {
     const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
     const navigate = useNavigate();
 
     const fetchProducts = async () => {
-        const data = await getProducts();
-        setProducts(data);
+        try {
+            const data = await getProducts();
+            setProducts(data);
+        } catch (err) {
+            console.error("Error fetching products:", err);
+        }
+    };
+
+    const fetchCategories = async () => {
+        try {
+            const cats = await getCategories();
+            setCategories(cats);
+        } catch (err) {
+            console.error("Error fetching categories:", err);
+        }
     };
 
     useEffect(() => {
+        fetchCategories();
         fetchProducts();
     }, []);
 
     const handleDelete = async (id: number) => {
         if (!confirm("Вы уверены, что хотите удалить этот товар?")) return;
-        await deleteProduct(id);
-        fetchProducts();
+        try {
+            await deleteProduct(id);
+            await fetchProducts();
+        } catch (err) {
+            console.error("Error deleting product:", err);
+            alert("Не удалось удалить товар");
+        }
+    };
+
+    const getCategoryName = (categoryId: string): string => {
+        const cat = categories.find((c) => c.id === categoryId);
+        return cat ? cat.name : categoryId;
     };
 
     return (
@@ -55,7 +84,9 @@ const ProductList: React.FC = () => {
                         <td className={styles.td}>{prod.id}</td>
                         <td className={styles.td}>{prod.sku}</td>
                         <td className={styles.td}>{prod.name}</td>
-                        <td className={styles.td}>{prod.categoryId}</td>
+                        <td className={styles.td}>
+                            {getCategoryName(prod.categoryId)}
+                        </td>
                         <td className={styles.td}>{prod.price}</td>
                         <td className={styles.td}>{prod.stockQty}</td>
                         <td className={styles.td}>
@@ -67,7 +98,7 @@ const ProductList: React.FC = () => {
                             />
                         </td>
                         <td className={styles.td}>
-                <pre style={{ fontSize: 12, whiteSpace: "pre-wrap" }}>
+                <pre style={{fontSize: 12, whiteSpace: "pre-wrap"}}>
                   {JSON.stringify(prod.attributes, null, 2)}
                 </pre>
                         </td>
@@ -75,7 +106,9 @@ const ProductList: React.FC = () => {
                             <div className={styles["action-buttons"]}>
                                 <button
                                     className={styles["edit-button"]}
-                                    onClick={() => navigate(`/products/edit/${prod.id}`)}
+                                    onClick={() =>
+                                        navigate(`/products/edit/${prod.id}`)
+                                    }
                                 >
                                     Редактировать
                                 </button>

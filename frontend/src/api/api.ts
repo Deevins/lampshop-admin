@@ -1,4 +1,5 @@
 import type {Category} from "../types/Product.ts";
+import type {AxiosResponse} from "axios";
 
 export const categories: Category[] = [
     {id: "bulb", name: "Лампочки"},
@@ -31,3 +32,17 @@ export const attributeOptions: Record<string, AttributeOption[]> = {
     ]
 };
 
+
+export const BASE_URL = "http://localhost:8080";
+
+// Вспомогательная функция для обработки ответа
+// Если нужно, можно расширить логику обработки ошибок
+export async function handleResponse<T>(promise: Promise<AxiosResponse<T>>): Promise<T> {
+    try {
+        const response = await promise;
+        return response.data;
+    } catch (err: unknown) {
+        // @ts-ignore
+        throw new Error(err.response?.data?.error || `HTTP error! status: ${err.response?.status}`);
+    }
+}

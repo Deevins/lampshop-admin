@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/gin-contrib/cors"
 	"net/http"
 	"strconv"
 	"sync"
@@ -165,6 +164,7 @@ func init() {
 
 func main() {
 	router := gin.Default()
+	router.Use(corsMiddleware())
 
 	// ========== Категории и атрибуты ==========
 	router.GET("/categories", getCategoriesHandler)
@@ -180,15 +180,6 @@ func main() {
 	// ========== Просмотр и изменение статуса заказов ==========
 	router.GET("/orders", getOrdersHandler)
 	router.PUT("/orders/:id/status", updateOrderStatusHandler)
-
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
 
 	// Запускаем на порту 8080
 	router.Run(":8080")
@@ -395,4 +386,19 @@ func updateOrderStatusHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNotFound, gin.H{"error": "Заказ не найден"})
+}
+
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
 }
