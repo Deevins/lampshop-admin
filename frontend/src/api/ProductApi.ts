@@ -1,16 +1,15 @@
+import {axiosInstance, BASE_URL, handleResponse} from "./api";
 import type {Product} from "../types/Product.ts";
-import {BASE_URL, handleResponse} from "./api.ts";
-import axios from "axios";
 
 export const getProducts = async (): Promise<Product[]> => {
     return handleResponse<Product[]>(
-        axios.get(`${BASE_URL}/products`)
+        axiosInstance.get(`${BASE_URL}/products`)
     );
 };
 
 export const getProductById = async (id: number): Promise<Product> => {
     return handleResponse<Product>(
-        axios.get(`${BASE_URL}/products/${id}`)
+        axiosInstance.get(`${BASE_URL}/products/${id}`)
     );
 };
 
@@ -20,10 +19,8 @@ export const addProduct = async (
     data: UpsertProductDTO
 ): Promise<Product> => {
     return handleResponse<Product>(
-        axios.post(`${BASE_URL}/products`, data, {
-            headers: {
-                "Content-Type": "application/json",
-            },
+        axiosInstance.post(`${BASE_URL}/products`, data, {
+            headers: {"Content-Type": "application/json"},
         })
     );
 };
@@ -33,16 +30,14 @@ export const updateProduct = async (
     data: UpsertProductDTO
 ): Promise<Product> => {
     return handleResponse<Product>(
-        axios.put(`${BASE_URL}/products/${id}`, data, {
-            headers: {
-                "Content-Type": "application/json",
-            },
+        axiosInstance.put(`${BASE_URL}/products/${id}`, data, {
+            headers: {"Content-Type": "application/json"},
         })
     );
 };
 
 export const deleteProduct = async (id: number): Promise<void> => {
-    await handleResponse(
-        axios.delete(`${BASE_URL}/products/${id}`)
+    await handleResponse<void>(
+        axiosInstance.delete(`${BASE_URL}/products/${id}`)
     );
 };

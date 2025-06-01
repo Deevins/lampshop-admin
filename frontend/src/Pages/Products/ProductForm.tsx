@@ -3,8 +3,7 @@ import {useNavigate, useParams} from "react-router-dom";
 
 import styles from "./ProductForm.module.scss";
 import {addProduct, getProductById, updateProduct} from "../../api/ProductApi.ts";
-import type {Category} from "../../types/Product.ts";
-import type {AttributeOption} from "../../api/api.ts";
+import type {AttributeOption, Category} from "../../types/Product.ts";
 import {getAttributeOptions, getCategories} from "../../api/OrderApi.ts";
 
 
@@ -21,13 +20,15 @@ interface FormState {
 }
 
 const ProductForm: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const {id} = useParams<{ id: string }>();
     const isEditMode = Boolean(id);
     const navigate = useNavigate();
 
-    // Состояния для динамических данных
+    // Динамические данные
     const [categories, setCategories] = useState<Category[]>([]);
-    const [attributeOptions, setAttributeOptions] = useState<AttributeOption[]>([]);
+    const [attributeOptions, setAttributeOptions] = useState<
+        AttributeOption[]
+    >([]);
 
     // Состояние формы
     const [formState, setFormState] = useState<FormState>({
@@ -44,11 +45,9 @@ const ProductForm: React.FC = () => {
 
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Флаг, что данные товара (в режиме редактирования) уже загружены
     const [productLoaded, setProductLoaded] = useState<boolean>(false);
 
-    // 1) Загрузить категории при монтировании
+    // 1) Загрузка категорий
     useEffect(() => {
         const fetchCats = async () => {
             try {
@@ -61,13 +60,12 @@ const ProductForm: React.FC = () => {
         fetchCats();
     }, []);
 
-    // 2) Если в режиме редактирования, загрузить товар по ID
+    // 2) Если режим редактирования, загружаем товар по ID и атрибуты для его категории
     useEffect(() => {
         if (isEditMode && id) {
             setLoading(true);
             getProductById(Number(id))
                 .then((prod) => {
-                    // Заполняем все поля формы
                     setFormState({
                         sku: prod.sku,
                         name: prod.name,
@@ -77,10 +75,9 @@ const ProductForm: React.FC = () => {
                         stockQty: prod.stockQty,
                         imageUrl: prod.imageUrl,
                         isActive: prod.isActive,
-                        attributes: { ...prod.attributes }, // сохраняем атрибуты из ответа
+                        attributes: {...prod.attributes},
                     });
                     setProductLoaded(true);
-                    // Подгружаем опции атрибутов для данной категории
                     return getAttributeOptions(prod.categoryId);
                 })
                 .then((opts) => {
@@ -96,49 +93,41 @@ const ProductForm: React.FC = () => {
         }
     }, [id, isEditMode]);
 
-    // 3) Если не в режиме редактирования, или если пользователь сменил категорию после создания,
-    //    нужно подгрузить опции и инициализировать атрибуты по умолчанию.
+    // 3) Обработка смены категории (создание товара или выбор новой категории в режиме редактирования)
     useEffect(() => {
-        // Случай: режим редактирования. Тогда мы не хотим перезаписывать уже загруженные атрибуты.
-        // Но если товар ещё не загружен, это значит, что категория может меняться (нет исходных attrs) —
-        // тогда мы выполним инициализацию.
-        if (isEditMode) {
-            if (!productLoaded && formState.categoryId) {
-                // Пока товар не загружен, но categoryId мог быть из начального состояния (""),
-                // и юзер может его менять до загрузки. Впрочем, обычно forced load происходит сразу.
-                const cid = formState.categoryId;
-                getAttributeOptions(cid)
-                    .then((opts) => {
-                        setAttributeOptions(opts);
-                        // Инициализируем пустые значения (пока)
-                        const newAttrs: Record<string, string | number> = {};
-                        opts.forEach((attr) => {
-                            newAttrs[attr.key] = attr.type === "number" ? 0 : "";
-                        });
-                        setFormState((prev) => ({
-                            ...prev,
-                            attributes: newAttrs,
-                        }));
-                    })
-                    .catch((err) => {
-                        console.error("Error fetching attribute options:", err);
-                        setAttributeOptions([]);
-                        setFormState((prev) => ({
-                            ...prev,
-                            attributes: {},
-                        }));
+        // Если режим редактирования, но товар ещё не загружен (productLoaded=false),
+        // то нам нужно всё равно подгрузить атрибуты для выбранной категории (если юзер сменил dropdown раньше, чем загрузился товар)
+        if (isEditMode && !productLoaded && formState.categoryId) {
+            const cid = formState.categoryId;
+            getAttributeOptions(cid)
+                .then((opts) => {
+                    setAttributeOptions(opts);
+                    const newAttrs: Record<string, string | number> = {};
+                    opts.forEach((attr) => {
+                        newAttrs[attr.key] = attr.type === "number" ? 0 : "";
                     });
-            }
+                    setFormState((prev) => ({
+                        ...prev,
+                        attributes: newAttrs,
+                    }));
+                })
+                .catch((err) => {
+                    console.error("Error fetching attribute options:", err);
+                    setAttributeOptions([]);
+                    setFormState((prev) => ({
+                        ...prev,
+                        attributes: {},
+                    }));
+                });
             return;
         }
 
-        // Случай: режим "создания" (не редактирование) или товар загружен и пользователь изменил категорию вручную.
-        if (formState.categoryId) {
+        // Если не режим редактирования (создание нового товара) и категория выбрана
+        if (!isEditMode && formState.categoryId) {
             setLoading(true);
             getAttributeOptions(formState.categoryId)
                 .then((opts) => {
                     setAttributeOptions(opts);
-                    // Инициализируем пустые значения атрибутов
                     const newAttrs: Record<string, string | number> = {};
                     opts.forEach((attr) => {
                         newAttrs[attr.key] = attr.type === "number" ? 0 : "";
@@ -160,15 +149,14 @@ const ProductForm: React.FC = () => {
         }
     }, [formState.categoryId, isEditMode, productLoaded]);
 
-    // 4) Обработчик для простых полей: <input>, <textarea>, <select>
+    // 4) Обработчик простых полей
     const handleChangeBasic = (
         e: React.ChangeEvent<
             HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
         >
     ) => {
         const target = e.target as HTMLInputElement;
-        const { name, type, value, checked } = target;
-
+        const {name, type, value, checked} = target;
         setFormState((prev) => ({
             ...prev,
             [name]:
@@ -180,7 +168,7 @@ const ProductForm: React.FC = () => {
         }));
     };
 
-    // 5) Обработчик изменения динамических атрибутов
+    // 5) Обработчик динамических атрибутов
     const handleChangeAttribute = (key: string, value: string | number) => {
         setFormState((prev) => ({
             ...prev,
@@ -191,7 +179,7 @@ const ProductForm: React.FC = () => {
         }));
     };
 
-    // 6) Отправка формы (создание или обновление)
+    // 6) Отправка формы
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -239,7 +227,7 @@ const ProductForm: React.FC = () => {
 
             {!loading && (
                 <form onSubmit={handleSubmit}>
-                    {/* ===== Артикул (SKU) ===== */}
+                    {/* SKU */}
                     <div className={styles["form-group"]}>
                         <label className={styles["form-label"]} htmlFor="sku">
                             Артикул (SKU)
@@ -255,7 +243,7 @@ const ProductForm: React.FC = () => {
                         />
                     </div>
 
-                    {/* ===== Название ===== */}
+                    {/* Название */}
                     <div className={styles["form-group"]}>
                         <label className={styles["form-label"]} htmlFor="name">
                             Название
@@ -271,7 +259,7 @@ const ProductForm: React.FC = () => {
                         />
                     </div>
 
-                    {/* ===== Описание ===== */}
+                    {/* Описание */}
                     <div className={styles["form-group"]}>
                         <label className={styles["form-label"]} htmlFor="description">
                             Описание
@@ -286,7 +274,7 @@ const ProductForm: React.FC = () => {
                         />
                     </div>
 
-                    {/* ===== Категория ===== */}
+                    {/* Категория */}
                     <div className={styles["form-group"]}>
                         <label className={styles["form-label"]} htmlFor="categoryId">
                             Категория
@@ -308,7 +296,7 @@ const ProductForm: React.FC = () => {
                         </select>
                     </div>
 
-                    {/* ===== Цена ===== */}
+                    {/* Цена */}
                     <div className={styles["form-group"]}>
                         <label className={styles["form-label"]} htmlFor="price">
                             Цена (₽)
@@ -326,7 +314,7 @@ const ProductForm: React.FC = () => {
                         />
                     </div>
 
-                    {/* ===== Количество на складе ===== */}
+                    {/* Количество на складе */}
                     <div className={styles["form-group"]}>
                         <label className={styles["form-label"]} htmlFor="stockQty">
                             Количество на складе
@@ -343,7 +331,7 @@ const ProductForm: React.FC = () => {
                         />
                     </div>
 
-                    {/* ===== Ссылка на изображение ===== */}
+                    {/* Ссылка на изображение */}
                     <div className={styles["form-group"]}>
                         <label className={styles["form-label"]} htmlFor="imageUrl">
                             Ссылка на изображение (URL)
@@ -358,7 +346,7 @@ const ProductForm: React.FC = () => {
                         />
                     </div>
 
-                    {/* ===== Активность товара ===== */}
+                    {/* Активность товара */}
                     <div className={styles["form-group"]}>
                         <label className={styles["form-label"]}>
                             <input
@@ -371,7 +359,7 @@ const ProductForm: React.FC = () => {
                         </label>
                     </div>
 
-                    {/* ===== Динамические атрибуты ===== */}
+                    {/* Динамические атрибуты */}
                     {formState.categoryId && (
                         <div className={styles["attributes-section"]}>
                             <h3>Атрибуты для категории:</h3>
@@ -406,7 +394,7 @@ const ProductForm: React.FC = () => {
                     )}
 
                     {error && (
-                        <p style={{ color: "#d9534f", marginTop: 10 }}>
+                        <p style={{color: "#d9534f", marginTop: 10}}>
                             {error}
                         </p>
                     )}

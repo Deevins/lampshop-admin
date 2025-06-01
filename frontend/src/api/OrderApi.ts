@@ -1,41 +1,42 @@
-import type {Category} from "../types/Product.ts";
-import {type AttributeOption, BASE_URL, handleResponse} from "./api.ts";
-import axios from "axios";
+import {axiosInstance, BASE_URL, handleResponse} from "./api";
+import type {AttributeOption, Category} from "../types/Product.ts";
 import type {Order, OrderStatus} from "../types/Order.ts";
 
+// Получить категории
 export const getCategories = async (): Promise<Category[]> => {
     return handleResponse<Category[]>(
-        axios.get(`${BASE_URL}/categories`)
+        axiosInstance.get(`${BASE_URL}/categories`)
     );
 };
 
+// Получить опции атрибутов для категории
 export const getAttributeOptions = async (
     categoryId: string
 ): Promise<AttributeOption[]> => {
     return handleResponse<AttributeOption[]>(
-        axios.get(`${BASE_URL}/categories/${encodeURIComponent(categoryId)}/attributes`)
+        axiosInstance.get(
+            `${BASE_URL}/categories/${encodeURIComponent(categoryId)}/attributes`
+        )
     );
 };
 
+// Получить все заказы
 export const getOrders = async (): Promise<Order[]> => {
     return handleResponse<Order[]>(
-        axios.get(`${BASE_URL}/orders`)
+        axiosInstance.get(`${BASE_URL}/orders`)
     );
 };
 
+// Обновить статус заказа
 export const updateOrderStatus = async (
     id: number,
     status: OrderStatus
 ): Promise<Order> => {
     return handleResponse<Order>(
-        axios.put(
+        axiosInstance.put(
             `${BASE_URL}/orders/${id}/status`,
             {status},
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            }
+            {headers: {"Content-Type": "application/json"}}
         )
     );
 };

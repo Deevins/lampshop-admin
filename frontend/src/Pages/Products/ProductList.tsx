@@ -13,15 +13,18 @@ const ProductList: React.FC = () => {
     const [categories, setCategories] = useState<Category[]>([]);
     const navigate = useNavigate();
 
+    // Загрузка списка товаров
     const fetchProducts = async () => {
         try {
             const data = await getProducts();
             setProducts(data);
         } catch (err) {
             console.error("Error fetching products:", err);
+            // При 401 токен удалится, а ProtectedRoute перенаправит на /login
         }
     };
 
+    // Загрузка категорий (чтобы подставлять имя вместо ID)
     const fetchCategories = async () => {
         try {
             const cats = await getCategories();
@@ -38,15 +41,17 @@ const ProductList: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         if (!confirm("Вы уверены, что хотите удалить этот товар?")) return;
+
         try {
             await deleteProduct(id);
-            await fetchProducts();
+            fetchProducts();
         } catch (err) {
             console.error("Error deleting product:", err);
             alert("Не удалось удалить товар");
         }
     };
 
+    // Помощник: по categoryId вернуть имя
     const getCategoryName = (categoryId: string): string => {
         const cat = categories.find((c) => c.id === categoryId);
         return cat ? cat.name : categoryId;

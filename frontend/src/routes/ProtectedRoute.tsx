@@ -1,19 +1,21 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+
+// Простая проверка: если в localStorage есть jwtToken, считаем, что авторизация пройдена.
+// (В реальном приложении можно распарсить токен и проверить срок годности.)
+function isAuthenticated(): boolean {
+    return Boolean(localStorage.getItem("jwtToken"));
+}
 
 interface ProtectedRouteProps {
-    children: React.ReactElement;
+    children: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-    const { user } = useAuth();
-
-    if (!user) {
+    if (!isAuthenticated()) {
         return <Navigate to="/login" replace />;
     }
-
-    return children;
+    return <>{children}</>;
 };
 
 export default ProtectedRoute;

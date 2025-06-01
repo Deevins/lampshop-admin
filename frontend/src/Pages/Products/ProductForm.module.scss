@@ -1,33 +1,29 @@
-/* src/pages/Products/ProductForm.module.scss */
-
 .form-container {
   max-width: 600px;
-  margin: 0 auto;
+  margin: 40px auto;
   background-color: white;
-  padding: 20px;
   border-radius: 6px;
+  padding: 24px;
 }
 
 .title {
   font-size: 22px;
-  font-weight: 500;
   margin-bottom: 20px;
-  text-align: center;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 15px;
+  margin-bottom: 14px;
 }
 
 .form-label {
+  display: block;
   margin-bottom: 6px;
   font-weight: 500;
 }
 
 .form-input,
 .form-select {
+  width: 100%;
   padding: 8px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -36,30 +32,31 @@
 .attributes-section {
   margin-top: 20px;
   padding: 10px;
-  border: 1px solid #eee;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  background-color: #fafafa;
 }
 
 .attribute-row {
   display: flex;
-  flex-direction: column;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .attribute-row label {
-  margin-bottom: 4px;
-  font-size: 14px;
+  min-width: 120px;
 }
 
 .submit-button {
   background-color: #28a745;
   color: white;
-  padding: 10px 0;
-  width: 100%;
+  border: none;
+  padding: 10px 14px;
   border-radius: 4px;
+  cursor: pointer;
   font-size: 16px;
-  margin-top: 20px;
+  margin-top: 16px;
+  width: 100%;
   transition: background-color 0.2s;
 }
 

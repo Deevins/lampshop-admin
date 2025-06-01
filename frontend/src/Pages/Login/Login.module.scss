@@ -1,62 +1,58 @@
-/* Login.module.scss */
-
 .login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: #f5f5f5;
-}
-
-.login-box {
+  max-width: 400px;
+  margin: 80px auto;
   background-color: white;
-  padding: 40px;
   border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  width: 320px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 24px;
 }
 
-.login-title {
-  margin-bottom: 20px;
-  font-size: 24px;
+.title {
   text-align: center;
+  font-size: 24px;
+  margin-bottom: 16px;
 }
 
-.input-group {
-  margin-bottom: 15px;
+.form {
+  display: flex;
+  flex-direction: column;
 }
 
-.input-label {
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
   display: block;
   margin-bottom: 6px;
   font-weight: 500;
 }
 
-.input-field {
+.form-group input {
   width: 100%;
   padding: 8px 10px;
-  font-size: 14px;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
 
-.error-message {
-  color: #d9534f;
-  margin-top: 10px;
-  text-align: center;
-}
-
-.login-button {
-  width: 100%;
+.submit-btn {
   background-color: #007bff;
   color: white;
   padding: 10px 0;
-  font-size: 16px;
+  border: none;
   border-radius: 4px;
-  margin-top: 10px;
+  font-size: 16px;
+  margin-top: 16px;
+  cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.login-button:hover {
+.submit-btn:hover {
   background-color: #0056b3;
+}
+
+.error {
+  color: #dc3545;
+  margin-bottom: 8px;
+  text-align: center;
 }

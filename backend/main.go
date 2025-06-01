@@ -6,22 +6,38 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 )
 
+var jwtSecret = []byte("my_super_secret_key")
 
+const tokenTTL = time.Hour * 2
+
+// Hardcoded-администратор (логин/пароль).
+// В продакшене вы бы сверяли с базой, хэшировали пароль и т.д.
+var adminUsername = "admin"
+var adminPassword = "password123"
+
+// ==============================
+// Модели (модели, как и раньше)
+// ==============================
+
+// Category — модель категории
 type Category struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// AttributeOption — описание доступного атрибута в категории
+// AttributeOption — модель опций атрибутов
 type AttributeOption struct {
 	Key   string `json:"key"`
 	Label string `json:"label"`
 	Type  string `json:"type"`
 }
 
+// Product — товар с JSONB-атрибутами
 type Product struct {
 	ID          int                    `json:"id"`
 	SKU         string                 `json:"sku"`
@@ -37,7 +53,7 @@ type Product struct {
 	UpdatedAt   time.Time              `json:"updatedAt"`
 }
 
-// OrderItem — элемент в заказе, ссылается на Product.ID и количество
+// OrderItem — элемент заказа
 type OrderItem struct {
 	ProductID int `json:"productId"`
 	Quantity  int `json:"quantity"`
@@ -64,23 +80,35 @@ type Order struct {
 	UpdatedAt    time.Time   `json:"updatedAt"`
 }
 
+// UpdateStatusRequest — тело PUT /orders/:id/status
 type UpdateStatusRequest struct {
 	Status OrderStatus `json:"status"`
 }
 
-// ---------------------------------------------------
-//     In-Memory “База данных” (заглушка)
-// ---------------------------------------------------
+// LoginRequest — тело POST /login
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+// LoginResponse — ответ POST /login
+type LoginResponse struct {
+	Token string `json:"token"`
+}
+
+// ==============================
+// In-Memory «База» (заглушка)
+// ==============================
 
 var (
-	// Категории (имитируем, что эти данные брались бы из БД)
+	// Категории
 	categories = []Category{
 		{ID: "bulb", Name: "Лампочки"},
 		{ID: "cable", Name: "Кабели"},
 		{ID: "equipment", Name: "Оборудование"},
 	}
 
-	// Какие атрибуты есть у каждой категории (имитируем, что в БД есть таблица attribute_options)
+	// Опции атрибутов
 	attributeOptions = map[string][]AttributeOption{
 		"bulb": {
 			{Key: "power", Label: "Мощность (Вт)", Type: "number"},
@@ -102,7 +130,7 @@ var (
 
 	// Слайс товаров
 	products      = []Product{}
-	productsMutex = sync.RWMutex{} // для безопасного доступа из нескольких горутин
+	productsMutex = sync.RWMutex{}
 
 	// Слайс заказов
 	orders      = []Order{}
@@ -110,9 +138,7 @@ var (
 )
 
 func init() {
-	// Инициализируем один товар и один заказ “по умолчанию” для примера
-
-	// 1. Товар
+	// Инициализация одного товара и одного заказа «по умолчанию»
 	p := Product{
 		ID:          1,
 		SKU:         "BULB-007",
@@ -132,10 +158,8 @@ func init() {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-
 	products = append(products, p)
 
-	// 2. Заказ
 	o := Order{
 		ID:           1,
 		CustomerName: "Иван Иванов",
@@ -147,47 +171,136 @@ func init() {
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
 	}
-
 	orders = append(orders, o)
 }
 
-// ---------------------------------------------------
-//     Основная функция — настройка Gin и маршрутов
-// ---------------------------------------------------
+// ==============================
+// JWT-утилиты
+// ==============================
+
+// Создаёт JWT-токен с полем «sub» = username
+func generateJWT(username string) (string, error) {
+	claims := jwt.RegisteredClaims{
+		Subject:   username,
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenTTL)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
+// Парсит и валидирует JWT, возвращает Subject (username) или ошибку
+func parseJWT(tokenString string) (string, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok && token.Valid {
+		return claims.Subject, nil
+	}
+	return "", jwt.ErrTokenInvalidClaims
+}
+
+// ==============================
+// Middleware для проверки JWT
+// ==============================
+
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Ожидаем заголовок Authorization: Bearer <token>
+		authHeader := c.GetHeader("Authorization")
+		if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Требуется токен (Bearer)"})
+			c.Abort()
+			return
+		}
+		tokenString := authHeader[7:]
+		username, err := parseJWT(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверный или просроченный токен"})
+			c.Abort()
+			return
+		}
+
+		// В контексте Gin можно сохранить username, если нужно
+		c.Set("username", username)
+		c.Next()
+	}
+}
 
 func main() {
 	router := gin.Default()
-	router.Use(corsMiddleware())
 
-	// ========== Категории и атрибуты ==========
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"}, // React/Vite по умолчанию на 3000
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// ===== Незащищённые маршруты =====
+
+	// 1) Эндпоинт для логина
+	router.POST("/login", loginHandler)
+
+	// 2) Эндпоинты для получения категорий/атрибутов — тоже могут стоять под защитой или открытыми
+	//    Пока сделаем их открытыми (они нужны, чтобы заполнить dropdown на фронте).
 	router.GET("/categories", getCategoriesHandler)
 	router.GET("/categories/:id/attributes", getAttributeOptionsHandler)
 
-	// ========== CRUD для товаров ==========
-	router.GET("/products", getProductsHandler)
-	router.GET("/products/:id", getProductByIDHandler)
-	router.POST("/products", createProductHandler)
-	router.PUT("/products/:id", updateProductHandler)
-	router.DELETE("/products/:id", deleteProductHandler)
+	// ===== Защищённые маршруты (JWT) =====
+	protected := router.Group("/")
+	protected.Use(AuthMiddleware())
 
-	// ========== Просмотр и изменение статуса заказов ==========
-	router.GET("/orders", getOrdersHandler)
-	router.PUT("/orders/:id/status", updateOrderStatusHandler)
+	// Products
+	protected.GET("/products", getProductsHandler)
+	protected.GET("/products/:id", getProductByIDHandler)
+	protected.POST("/products", createProductHandler)
+	protected.PUT("/products/:id", updateProductHandler)
+	protected.DELETE("/products/:id", deleteProductHandler)
 
-	// Запускаем на порту 8080
+	// Orders
+	protected.GET("/orders", getOrdersHandler)
+	protected.PUT("/orders/:id/status", updateOrderStatusHandler)
+
+	// Запускаем сервер
 	router.Run(":8080")
 }
 
-// ---------------------------------------------------
-//     Handlers для Категорий и Атрибутов
-// ---------------------------------------------------
+// ==============================
+// Handlers
+// ==============================
 
-// getCategoriesHandler возвращает все категории
+// ===== Логин =====
+func loginHandler(c *gin.Context) {
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат JSON"})
+		return
+	}
+	if req.Username != adminUsername || req.Password != adminPassword {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверный логин или пароль"})
+		return
+	}
+	token, err := generateJWT(req.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось сгенерировать токен"})
+		return
+	}
+	c.JSON(http.StatusOK, LoginResponse{Token: token})
+}
+
+// ===== Categories / Attributes =====
+
 func getCategoriesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, categories)
 }
 
-// getAttributeOptionsHandler возвращает список AttributeOption для данной categoryId
 func getAttributeOptionsHandler(c *gin.Context) {
 	categoryID := c.Param("id")
 	if opts, exists := attributeOptions[categoryID]; exists {
@@ -197,22 +310,16 @@ func getAttributeOptionsHandler(c *gin.Context) {
 	}
 }
 
-// ---------------------------------------------------
-//     Handlers для Products
-// ---------------------------------------------------
+// ===== Products =====
 
-// getProductsHandler — GET /products
 func getProductsHandler(c *gin.Context) {
 	productsMutex.RLock()
 	defer productsMutex.RUnlock()
-
-	// Возвращаем копию, чтобы внешний код не мутировал наш in-memory-слайс
 	list := make([]Product, len(products))
 	copy(list, products)
 	c.JSON(http.StatusOK, list)
 }
 
-// getProductByIDHandler — GET /products/:id
 func getProductByIDHandler(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
@@ -220,7 +327,6 @@ func getProductByIDHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID"})
 		return
 	}
-
 	productsMutex.RLock()
 	defer productsMutex.RUnlock()
 	for _, p := range products {
@@ -232,18 +338,14 @@ func getProductByIDHandler(c *gin.Context) {
 	c.JSON(http.StatusNotFound, gin.H{"error": "Товар не найден"})
 }
 
-// createProductHandler — POST /products
 func createProductHandler(c *gin.Context) {
 	var newProduct Product
 	if err := c.ShouldBindJSON(&newProduct); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные товара"})
 		return
 	}
-
 	productsMutex.Lock()
 	defer productsMutex.Unlock()
-
-	// Сгенерируем новый ID как max(ID)+1
 	maxID := 0
 	for _, p := range products {
 		if p.ID > maxID {
@@ -251,7 +353,6 @@ func createProductHandler(c *gin.Context) {
 		}
 	}
 	newID := maxID + 1
-
 	now := time.Now()
 	created := Product{
 		ID:          newID,
@@ -267,12 +368,10 @@ func createProductHandler(c *gin.Context) {
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-
 	products = append(products, created)
 	c.JSON(http.StatusCreated, created)
 }
 
-// updateProductHandler — PUT /products/:id
 func updateProductHandler(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
@@ -280,19 +379,15 @@ func updateProductHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID"})
 		return
 	}
-
 	var upd Product
 	if err := c.ShouldBindJSON(&upd); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверные данные товара"})
 		return
 	}
-
 	productsMutex.Lock()
 	defer productsMutex.Unlock()
-
 	for idx, p := range products {
 		if p.ID == id {
-			// Меняем только те поля, которые пришли из JSON
 			products[idx].SKU = upd.SKU
 			products[idx].Name = upd.Name
 			products[idx].Description = upd.Description
@@ -303,16 +398,13 @@ func updateProductHandler(c *gin.Context) {
 			products[idx].StockQty = upd.StockQty
 			products[idx].Attributes = upd.Attributes
 			products[idx].UpdatedAt = time.Now()
-
 			c.JSON(http.StatusOK, products[idx])
 			return
 		}
 	}
-
 	c.JSON(http.StatusNotFound, gin.H{"error": "Товар не найден"})
 }
 
-// deleteProductHandler — DELETE /products/:id
 func deleteProductHandler(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
@@ -320,38 +412,28 @@ func deleteProductHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID"})
 		return
 	}
-
 	productsMutex.Lock()
 	defer productsMutex.Unlock()
-
 	for idx, p := range products {
 		if p.ID == id {
-			// Удаляем элемент из слайса
 			products = append(products[:idx], products[idx+1:]...)
 			c.JSON(http.StatusOK, gin.H{"result": "успешно удалён"})
 			return
 		}
 	}
-
 	c.JSON(http.StatusNotFound, gin.H{"error": "Товар не найден"})
 }
 
-// ---------------------------------------------------
-//     Handlers для Orders
-// ---------------------------------------------------
+// ===== Orders =====
 
-// getOrdersHandler — GET /orders
 func getOrdersHandler(c *gin.Context) {
 	ordersMutex.RLock()
 	defer ordersMutex.RUnlock()
-
-	// Возвращаем копию
 	list := make([]Order, len(orders))
 	copy(list, orders)
 	c.JSON(http.StatusOK, list)
 }
 
-// updateOrderStatusHandler — PUT /orders/:id/status
 func updateOrderStatusHandler(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
@@ -359,16 +441,13 @@ func updateOrderStatusHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID заказа"})
 		return
 	}
-
 	var req UpdateStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат запроса"})
 		return
 	}
-
 	ordersMutex.Lock()
 	defer ordersMutex.Unlock()
-
 	for idx, o := range orders {
 		if o.ID == id {
 			orders[idx].Status = req.Status
@@ -377,21 +456,5 @@ func updateOrderStatusHandler(c *gin.Context) {
 			return
 		}
 	}
-
 	c.JSON(http.StatusNotFound, gin.H{"error": "Заказ не найден"})
-}
-
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "*")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	}
 }

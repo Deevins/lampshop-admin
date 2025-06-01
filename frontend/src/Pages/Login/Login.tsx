@@ -1,63 +1,66 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+// src/pages/Auth/Login.tsx
+import React, {useState} from "react";
+import {useNavigate} from "react-router-dom";
 import styles from "./Login.module.scss";
+import {login} from "../../api/AuthApi.ts";
+
 
 const Login: React.FC = () => {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState<string | null>(null);
-    const { login } = useAuth();
     const navigate = useNavigate();
+    const [username, setUsername] = useState<string>("");
+    const [password, setPassword] = useState<string>("");
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        const success = await login(username, password);
-        if (success) {
+        setLoading(true);
+
+        try {
+            const token = await login(username, password);
+            localStorage.setItem("jwtToken", token);
             navigate("/products");
-        } else {
+        } catch (err: any) {
+            console.error("Login error:", err);
             setError("Неверный логин или пароль");
+            setLoading(false);
         }
     };
 
     return (
         <div className={styles["login-container"]}>
-            <div className={styles["login-box"]}>
-                <h2 className={styles["login-title"]}>Вход</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className={styles["input-group"]}>
-                        <label className={styles["input-label"]} htmlFor="username">
-                            Логин
-                        </label>
-                        <input
-                            id="username"
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className={styles["input-field"]}
-                            required
-                        />
-                    </div>
-                    <div className={styles["input-group"]}>
-                        <label className={styles["input-label"]} htmlFor="password">
-                            Пароль
-                        </label>
-                        <input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className={styles["input-field"]}
-                            required
-                        />
-                    </div>
-                    {error && <div className={styles["error-message"]}>{error}</div>}
-                    <button type="submit" className={styles["login-button"]}>
-                        Войти
-                    </button>
-                </form>
-            </div>
+            <h2 className={styles.title}>Войти как администратор</h2>
+            <form onSubmit={handleSubmit} className={styles.form}>
+                <div className={styles["form-group"]}>
+                    <label htmlFor="username">Логин</label>
+                    <input
+                        id="username"
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                    />
+                </div>
+                <div className={styles["form-group"]}>
+                    <label htmlFor="password">Пароль</label>
+                    <input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+                </div>
+                {error && <p className={styles.error}>{error}</p>}
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className={styles["submit-btn"]}
+                >
+                    {loading ? "Загрузка..." : "Войти"}
+                </button>
+            </form>
         </div>
     );
 };

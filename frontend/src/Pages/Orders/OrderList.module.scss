@@ -1,9 +1,10 @@
-/* OrderList.module.scss */
+/* src/pages/Orders/OrderList.module.scss */
 
 .orders-container {
   background-color: white;
   padding: 20px;
   border-radius: 6px;
+  position: relative;
 }
 
 .title {
@@ -33,4 +34,26 @@
   padding: 6px 8px;
   border-radius: 4px;
   border: 1px solid #ccc;
+}
+
+/* Стили для всплывающего уведомления (тоста) */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 4px;
+  color: #fff;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  opacity: 0.95;
+}
+
+.notification.success {
+  background-color: #28a745; /* зелёный фон для успеха */
+}
+
+.notification.error {
+  background-color: #dc3545; /* красный фон для ошибки */
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, {useEffect, useState} from "react"
 import styles from "./OrderList.module.scss";
 import {getOrders, updateOrderStatus} from "../../api/OrderApi.ts";
 import type {Order, OrderStatus} from "../../types/Order.ts";
@@ -45,7 +45,7 @@ const OrderList: React.FC = () => {
     useEffect(() => {
         if (notification.visible) {
             const timer = setTimeout(() => {
-                setNotification((prev) => ({ ...prev, visible: false }));
+                setNotification((prev) => ({...prev, visible: false}));
             }, 3000);
             return () => clearTimeout(timer);
         }
@@ -128,6 +128,7 @@ const OrderList: React.FC = () => {
                 </tbody>
             </table>
 
+            {/* Всплывающее уведомление (тост) */}
             {notification.visible && (
                 <div
                     className={`${styles.notification} ${
