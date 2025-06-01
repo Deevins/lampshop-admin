@@ -1,4 +1,4 @@
-/* ProductForm.module.scss */
+/* src/pages/Products/ProductForm.module.scss */
 
 .form-container {
   max-width: 600px;
@@ -26,10 +26,30 @@
   font-weight: 500;
 }
 
-.form-input {
+.form-input,
+.form-select {
   padding: 8px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+.attributes-section {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background-color: #fafafa;
+}
+
+.attribute-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.attribute-row label {
+  margin-bottom: 4px;
+  font-size: 14px;
 }
 
 .submit-button {

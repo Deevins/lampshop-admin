@@ -7,14 +7,10 @@ let orders: Order[] = [
     {
         id: 1,
         customerName: "Иван Иванов",
-        items: [
-            { productId: 1, quantity: 2 }
-            // You can expand as you wish
-        ],
+        items: [{ productId: 1, quantity: 2 }],
         totalPrice: 1000,
         status: "Pending"
     }
-    // More mock orders can be added.
 ];
 
 
