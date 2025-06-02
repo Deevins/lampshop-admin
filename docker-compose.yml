@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  lampshop-admin-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: lampshop_admin
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5436:5432"
+    volumes:
+      - admin-data:/var/lib/postgresql/data
+      - ./migrations/lampshop_admin:/docker-entrypoint-initdb.d
+
+
+  lampshop-admin-service:
+    build:
+      context: ./backend
+      dockerfile: build/package/Dockerfile
+    depends_on:
+      - lampshop-admin-db
+    environment:
+      DB_HOST: lampshop-admin
+      DB_PORT: 5436
+      DB_USER: postgres
+      DB_PASSWORD: secret
+      DB_NAME: lampshop_admin
+      PORT: 8083
+    ports:
+      - "8083:8083"
+
+volumes:
+  admin-data:

@@ -24,13 +24,11 @@ const ProductForm: React.FC = () => {
     const isEditMode = Boolean(id);
     const navigate = useNavigate();
 
-    // Динамические данные
     const [categories, setCategories] = useState<Category[]>([]);
     const [attributeOptions, setAttributeOptions] = useState<
         AttributeOption[]
     >([]);
 
-    // Состояние формы
     const [formState, setFormState] = useState<FormState>({
         sku: "",
         name: "",
@@ -47,7 +45,6 @@ const ProductForm: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [productLoaded, setProductLoaded] = useState<boolean>(false);
 
-    // 1) Загрузка категорий
     useEffect(() => {
         const fetchCats = async () => {
             try {
@@ -60,7 +57,6 @@ const ProductForm: React.FC = () => {
         fetchCats();
     }, []);
 
-    // 2) Если режим редактирования, загружаем товар по ID и атрибуты для его категории
     useEffect(() => {
         if (isEditMode && id) {
             setLoading(true);
@@ -93,10 +89,9 @@ const ProductForm: React.FC = () => {
         }
     }, [id, isEditMode]);
 
-    // 3) Обработка смены категории (создание товара или выбор новой категории в режиме редактирования)
     useEffect(() => {
         // Если режим редактирования, но товар ещё не загружен (productLoaded=false),
-        // то нам нужно всё равно подгрузить атрибуты для выбранной категории (если юзер сменил dropdown раньше, чем загрузился товар)
+        // то нужно всё равно подгрузить атрибуты для выбранной категории (если юзер сменил dropdown раньше, чем загрузился товар)
         if (isEditMode && !productLoaded && formState.categoryId) {
             const cid = formState.categoryId;
             getAttributeOptions(cid)
@@ -122,7 +117,6 @@ const ProductForm: React.FC = () => {
             return;
         }
 
-        // Если не режим редактирования (создание нового товара) и категория выбрана
         if (!isEditMode && formState.categoryId) {
             setLoading(true);
             getAttributeOptions(formState.categoryId)
@@ -149,7 +143,6 @@ const ProductForm: React.FC = () => {
         }
     }, [formState.categoryId, isEditMode, productLoaded]);
 
-    // 4) Обработчик простых полей
     const handleChangeBasic = (
         e: React.ChangeEvent<
             HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -168,7 +161,6 @@ const ProductForm: React.FC = () => {
         }));
     };
 
-    // 5) Обработчик динамических атрибутов
     const handleChangeAttribute = (key: string, value: string | number) => {
         setFormState((prev) => ({
             ...prev,
@@ -179,7 +171,6 @@ const ProductForm: React.FC = () => {
         }));
     };
 
-    // 6) Отправка формы
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);

@@ -1,5 +1,3 @@
-// src/pages/Products/ProductList.tsx
-
 import React, {useEffect, useState} from "react";
 import {useNavigate} from "react-router-dom";
 
@@ -13,18 +11,15 @@ const ProductList: React.FC = () => {
     const [categories, setCategories] = useState<Category[]>([]);
     const navigate = useNavigate();
 
-    // Загрузка списка товаров
     const fetchProducts = async () => {
         try {
             const data = await getProducts();
             setProducts(data);
         } catch (err) {
             console.error("Error fetching products:", err);
-            // При 401 токен удалится, а ProtectedRoute перенаправит на /login
         }
     };
 
-    // Загрузка категорий (чтобы подставлять имя вместо ID)
     const fetchCategories = async () => {
         try {
             const cats = await getCategories();
@@ -51,7 +46,6 @@ const ProductList: React.FC = () => {
         }
     };
 
-    // Помощник: по categoryId вернуть имя
     const getCategoryName = (categoryId: string): string => {
         const cat = categories.find((c) => c.id === categoryId);
         return cat ? cat.name : categoryId;

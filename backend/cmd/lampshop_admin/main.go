@@ -54,7 +54,7 @@ func main() {
 			Description: "Энергоэффективная лампочка для дома.",
 			CategoryID:  "bulb",
 			IsActive:    true,
-			ImageURL:    "https://via.placeholder.com/100?text=EcoBright+7W",
+			ImageURL:    "https://santhimetaleshop.in/cdn/shop/files/Untitleddesign_26a5d7f4-82b7-4e7a-ac43-068a31086beb.png?v=1694498000&width=1445",
 			Price:       500,
 			StockQty:    20,
 			Attributes: map[string]interface{}{
@@ -168,7 +168,7 @@ func main() {
 	})
 
 	// Запускаем HTTP-сервер на порту 8080
-	router.Run(":8080")
+	router.Run(":8083")
 }
 
 // AuthMiddleware проверяет в заголовке Authorization Bearer <token> и парсит JWT.
