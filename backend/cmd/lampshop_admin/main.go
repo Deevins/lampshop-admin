@@ -1,13 +1,17 @@
+// main.go
+
 package main
 
 import (
-	"github.com/Deevins/lampshop-admin-backend/internal/domain"
+	"bytes"
+	"context"
 	"github.com/Deevins/lampshop-admin-backend/internal/handler"
 	"github.com/Deevins/lampshop-admin-backend/internal/infra"
 	"github.com/Deevins/lampshop-admin-backend/internal/repository"
 	"github.com/Deevins/lampshop-admin-backend/internal/service"
+	"io"
+	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -15,106 +19,30 @@ import (
 )
 
 func main() {
-	// ============================
-	// 1) Инициализация “базы” в memory
-	// ============================
-
-	// Категории
-	initialCategories := []domain.Category{
-		{ID: "bulb", Name: "Лампочки"},
-		{ID: "cable", Name: "Кабели"},
-		{ID: "equipment", Name: "Оборудование"},
+	// 1) Подключаемся к PostgreSQL
+	ctx := context.Background()
+	dbPool, err := infra.NewPostgresPool(ctx)
+	if err != nil {
+		log.Fatalf("failed to connect to database: %v", err)
 	}
-	// Опции атрибутов (JSONB-структура)
-	initialAttributeOptions := map[string][]domain.AttributeOption{
-		"bulb": {
-			{Key: "power", Label: "Мощность (Вт)", Type: "number"},
-			{Key: "color", Label: "Цвет", Type: "text"},
-			{Key: "temperature", Label: "Температура (K)", Type: "number"},
-			{Key: "socketType", Label: "Тип цоколя", Type: "text"},
-		},
-		"cable": {
-			{Key: "length", Label: "Длина (м)", Type: "number"},
-			{Key: "material", Label: "Материал", Type: "text"},
-			{Key: "color", Label: "Цвет", Type: "text"},
-		},
-		"equipment": {
-			{Key: "manufacturer", Label: "Производитель", Type: "text"},
-			{Key: "model", Label: "Модель", Type: "text"},
-			{Key: "warranty", Label: "Гарантия (мес.)", Type: "number"},
-		},
-	}
+	defer dbPool.Close()
 
-	// Один пример товара
-	initialProducts := []domain.Product{
-		{
-			ID:          1,
-			SKU:         "BULB-007",
-			Name:        "EcoBright 7W",
-			Description: "Энергоэффективная лампочка для дома.",
-			CategoryID:  "bulb",
-			IsActive:    true,
-			ImageURL:    "https://santhimetaleshop.in/cdn/shop/files/Untitleddesign_26a5d7f4-82b7-4e7a-ac43-068a31086beb.png?v=1694498000&width=1445",
-			Price:       500,
-			StockQty:    20,
-			Attributes: map[string]interface{}{
-				"power":       7,
-				"color":       "Тёплый белый",
-				"temperature": 2700,
-				"socketType":  "E27",
-			},
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		},
-	}
+	// 2) Инициализируем репозитории и сервисы (для локальных данных: auth и categories)
+	authRepo := repository.NewAuthRepository(dbPool)
+	attrRepo := repository.NewAttributeRepository(dbPool)
+	authService := service.NewAuthService(authRepo)
+	categoryService := service.NewCategoryService(attrRepo)
+	authHandler := handler.NewAuthHandler(authService)
+	categoryHandler := handler.NewCategoryHandler(categoryService)
 
-	// Один пример заказа
-	initialOrders := []domain.Order{
-		{
-			ID:           1,
-			CustomerName: "Иван Иванов",
-			Items: []domain.OrderItem{
-				{ProductID: 1, Quantity: 2},
-			},
-			TotalPrice: 1000,
-			Status:     domain.StatusPending,
-			CreatedAt:  time.Now(),
-			UpdatedAt:  time.Now(),
-		},
-	}
+	// 3) Инициализируем внешние HTTP-клиенты для order- и product-сервисов
+	orderServiceURL := "http://localhost:8082"
+	productServiceURL := "http://localhost:8081"
 
-	// ============================
-	// 2) Репозитории
-	// ============================
-	catRepo := repository.NewInMemoryCategoryRepo(initialCategories)
-	attrRepo := repository.NewInMemoryAttributeRepo(initialAttributeOptions)
-	prodRepo := repository.NewInMemoryProductRepo(initialProducts)
-	orderRepo := repository.NewInMemoryOrderRepo(initialOrders)
+	orderClient := infra.NewOrderServiceClient(orderServiceURL)
+	productClient := infra.NewProductServiceClient(productServiceURL)
 
-	// ============================
-	// 3) Сервисы
-	// ============================
-	authSrv := service.NewAuthService()
-	categorySrv := service.NewCategoryService(catRepo, attrRepo)
-	productSrv := service.NewProductService(prodRepo)
-	orderSrv := service.NewOrderService(orderRepo)
-
-	// ============================
-	// 4) Внешние клиенты (Infrastructure)
-	// ============================
-	externalClient := infra.NewInMemoryExternalClient()
-
-	// ============================
-	// 5) Хендлеры
-	// ============================
-	authHandler := handler.NewAuthHandler(authSrv)
-	categoryHandler := handler.NewCategoryHandler(categorySrv)
-	productHandler := handler.NewProductHandler(productSrv)
-	orderHandler := handler.NewOrderHandler(orderSrv)
-
-	// ============================
-	// 6) Gin, CORS, Middleware
-	// ============================
+	// 4) Настраиваем Gin + CORS
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
@@ -125,55 +53,116 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Открытые маршруты
+	// 5) Открытые маршруты
 	router.POST("/login", authHandler.Login)
 	router.GET("/categories", categoryHandler.GetCategories)
 	router.GET("/categories/:id/attributes", categoryHandler.GetAttributeOptions)
 
-	// Группа защищённых маршрутов: JWT-middleware
+	// 6) Защищенные маршруты с JWT-миддлварой
 	protected := router.Group("/")
-	protected.Use(AuthMiddleware(externalClient))
+	//protected.Use(AuthMiddleware())
 
-	// --- CRUD для продуктов ---
-	protected.GET("/products", productHandler.GetProducts)
-	protected.GET("/products/:id", productHandler.GetProductByID)
-	protected.POST("/products", productHandler.CreateProduct)
-	protected.PUT("/products/:id", productHandler.UpdateProduct)
-	protected.DELETE("/products/:id", productHandler.DeleteProduct)
-
-	// --- CRUD для заказов (только чтение + обновление статуса) ---
-	protected.GET("/orders", orderHandler.GetOrders)
-	protected.PUT("/orders/:id/status", func(c *gin.Context) {
-		var req struct {
-			Status domain.OrderStatus `json:"status"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
-			return
-		}
-		idStr := c.Param("id")
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order ID"})
-			return
-		}
-		updated, err := orderSrv.UpdateOrderStatus(id, req.Status)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "order not found"})
-			return
-		}
-		// Вызов внешнего сервиса — “уведомление” о смене статуса
-		_ = externalClient.NotifyOrderStatusChange(updated.ID, string(updated.Status))
-		c.JSON(http.StatusOK, updated)
+	// ===== Order-service прокси-ручки =====
+	protected.GET("/orders", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		resp, err := orderClient.GetAllOrders(token)
+		infra.ProxyResponse(c, resp, err)
 	})
 
-	// Запускаем HTTP-сервер на порту 8080
-	router.Run(":8083")
+	// ===== Order-service прокси-ручки =====
+	protected.PUT("/orders/:id/status", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		orderID := c.Param("id")
+		bodyBuf := new(bytes.Buffer)
+		_, _ = io.Copy(bodyBuf, c.Request.Body)
+
+		resp, err := orderClient.UpdateOrderStatus(token, orderID, bodyBuf)
+		infra.ProxyResponse(c, resp, err)
+	})
+
+	protected.GET("/orders/active", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		resp, err := orderClient.GetActiveOrders(token)
+		infra.ProxyResponse(c, resp, err)
+	})
+	protected.GET("/orders/:id/status", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		orderID := c.Param("id")
+		resp, err := orderClient.GetOrderStatus(token, orderID)
+		infra.ProxyResponse(c, resp, err)
+	})
+	protected.POST("/checkout", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		bodyBuf := new(bytes.Buffer)
+		_, _ = io.Copy(bodyBuf, c.Request.Body)
+		resp, err := orderClient.CreateOrder(token, bodyBuf)
+		infra.ProxyResponse(c, resp, err)
+	})
+
+	// ===== Product-service прокси-ручки =====
+	protected.GET("/products", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		resp, err := productClient.ListProducts(token)
+		infra.ProxyResponse(c, resp, err)
+	})
+	protected.POST("/products", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		bodyBuf := new(bytes.Buffer)
+		_, _ = io.Copy(bodyBuf, c.Request.Body)
+		resp, err := productClient.CreateProduct(token, bodyBuf)
+		infra.ProxyResponse(c, resp, err)
+	})
+	protected.GET("/products/:id", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		productID := c.Param("id")
+		resp, err := productClient.GetProductByID(token, productID)
+		infra.ProxyResponse(c, resp, err)
+	})
+	protected.PUT("/products/:id", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		productID := c.Param("id")
+		bodyBuf := new(bytes.Buffer)
+		_, _ = io.Copy(bodyBuf, c.Request.Body)
+		resp, err := productClient.UpdateProduct(token, productID, bodyBuf)
+		infra.ProxyResponse(c, resp, err)
+	})
+	protected.DELETE("/products/:id", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		productID := c.Param("id")
+		resp, err := productClient.DeleteProduct(token, productID)
+		infra.ProxyResponse(c, resp, err)
+	})
+
+	protected.GET("/products/upload-url", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		resp, err := productClient.GetUploadURL(token)
+		infra.ProxyResponse(c, resp, err)
+	})
+	protected.POST("/products/notify-upload", func(c *gin.Context) {
+		//token := extractBearerToken(c.Request.Header.Get("Authorization"))
+		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+		bodyBuf := new(bytes.Buffer)
+		_, _ = io.Copy(bodyBuf, c.Request.Body)
+		resp, err := productClient.NotifyUpload(token, bodyBuf)
+		infra.ProxyResponse(c, resp, err)
+	})
+
+	router.Run(":" + "8083")
 }
 
-// AuthMiddleware проверяет в заголовке Authorization Bearer <token> и парсит JWT.
-// Если токен невалидный или отсутствует — возвращает 401.
-func AuthMiddleware(externalClient infra.ExternalClient) gin.HandlerFunc {
+// AuthMiddleware проверяет заголовок Authorization Bearer <token>
+func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
@@ -188,11 +177,15 @@ func AuthMiddleware(externalClient infra.ExternalClient) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		// При желании можно сохранить username в контексте Gin:
 		c.Set("username", username)
-
-		// Здесь можно вызывать externalClient, если требуется:
-		// externalClient.SomeMethod(...)
 		c.Next()
 	}
+}
+
+// extractBearerToken убирает "Bearer " префикс и возвращает сам токен.
+func extractBearerToken(headerValue string) string {
+	if len(headerValue) > 7 && headerValue[:7] == "Bearer " {
+		return headerValue[7:]
+	}
+	return ""
 }

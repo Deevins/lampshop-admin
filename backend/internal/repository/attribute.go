@@ -1,29 +1,34 @@
 package repository
 
-import "github.com/Deevins/lampshop-admin-backend/internal/domain"
+import (
+	"context"
+	"github.com/Deevins/lampshop-admin-backend/internal/repository/sql"
 
-// AttributeRepository описывает методы для получения атрибутов по категории.
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// AttributeRepository описывает методы получения категорий и атрибутов.
 type AttributeRepository interface {
-	GetByCategoryID(categoryID string) ([]domain.AttributeOption, error)
+	ListCategories(ctx context.Context) ([]*sql.Category, error)
+	ListAttributesByCategory(ctx context.Context, categoryID uuid.UUID) ([]*sql.AttributeOption, error)
 }
 
-// InMemoryAttributeRepo — in-memory реализация AttributeRepository.
-type InMemoryAttributeRepo struct {
-	options map[string][]domain.AttributeOption
+// attributeRepoPG — реализация через sqlc/pgx.
+type attributeRepoPG struct {
+	queries *sql.Queries
 }
 
-// NewInMemoryAttributeRepo создаёт репозиторий с начальными опциями.
-func NewInMemoryAttributeRepo(initial map[string][]domain.AttributeOption) *InMemoryAttributeRepo {
-	return &InMemoryAttributeRepo{options: initial}
-}
-
-func (r *InMemoryAttributeRepo) GetByCategoryID(categoryID string) ([]domain.AttributeOption, error) {
-	if opts, ok := r.options[categoryID]; ok {
-		copyOpts := make([]domain.AttributeOption, len(opts))
-		copy(copyOpts, opts)
-		return copyOpts, nil
+func NewAttributeRepository(pool *pgxpool.Pool) AttributeRepository {
+	return &attributeRepoPG{
+		queries: sql.New(pool),
 	}
-	return nil, ErrAttributesNotFound
 }
 
-var ErrAttributesNotFound = &RepoError{"attributes not found for category"}
+func (r *attributeRepoPG) ListCategories(ctx context.Context) ([]*sql.Category, error) {
+	return r.queries.ListCategories(ctx)
+}
+
+func (r *attributeRepoPG) ListAttributesByCategory(ctx context.Context, categoryID uuid.UUID) ([]*sql.AttributeOption, error) {
+	return r.queries.ListAttributeOptionsByCategory(ctx, categoryID)
+}

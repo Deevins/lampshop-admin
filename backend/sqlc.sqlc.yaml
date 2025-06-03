@@ -1,0 +1,102 @@
+sql:
+    - engine: postgresql
+      gen:
+        go:
+            emit_interface: true
+            emit_params_struct_pointers: true
+            emit_pointers_for_null_types: true
+            emit_result_struct_pointers: true
+            omit_unused_structs: true
+            out: internal\repository\sql\
+            output_db_file_name: db_sqlc.go
+            output_files_suffix: _sqlc
+            overrides:
+                - db_type: uuid
+                  go_type:
+                    import: github.com/google/uuid
+                    type: UUID
+                - db_type: uuid
+                  go_type:
+                    import: github.com/google/uuid
+                    pointer: true
+                    type: UUID
+                  nullable: true
+                - db_type: text
+                  go_type: string
+                - db_type: text
+                  go_type:
+                    pointer: true
+                    type: string
+                  nullable: true
+                - db_type: jsonb
+                  go_type:
+                    import: encoding/json
+                    type: RawMessage
+                - db_type: jsonb
+                  go_type:
+                    import: encoding/json
+                    type: RawMessage
+                  nullable: true
+                - db_type: pg_catalog.timestamptz
+                  go_type:
+                    import: time
+                    type: Time
+                - db_type: pg_catalog.timestamptz
+                  go_type:
+                    import: time
+                    pointer: true
+                    type: Time
+                  nullable: true
+                - db_type: timestamptz
+                  go_type:
+                    import: time
+                    type: Time
+                - db_type: timestamptz
+                  go_type:
+                    import: time
+                    pointer: true
+                    type: Time
+                  nullable: true
+                - db_type: timestamp
+                  go_type:
+                    import: time
+                    type: Time
+                - db_type: timestamp
+                  go_type:
+                    import: time
+                    pointer: true
+                    type: Time
+                  nullable: true
+                - db_type: int4
+                  go_type: int
+                - db_type: int4
+                  go_type:
+                    pointer: true
+                    type: int
+                  nullable: true
+                - db_type: pg_catalog.numeric
+                  go_type:
+                    import: github.com/shopspring/decimal
+                    type: Decimal
+                - db_type: pg_catalog.numeric
+                  go_type:
+                    import: github.com/shopspring/decimal
+                    type: NullDecimal
+                  nullable: true
+                - db_type: date
+                  go_type:
+                    import: time
+                    pointer: true
+                    type: Time
+                  nullable: true
+                - db_type: date
+                  go_type:
+                    import: time
+                    pointer: true
+                    type: Time
+                  nullable: true
+            package: sql
+            sql_package: pgx/v5
+      queries: internal/repository/sql/query.sql
+      schema: migrations
+version: "2"

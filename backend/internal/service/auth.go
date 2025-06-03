@@ -1,34 +1,31 @@
+// internal/service/auth_service.go
+
 package service
 
 import (
+	"context"
 	"errors"
-	"github.com/Deevins/lampshop-admin-backend/internal/domain"
 	"github.com/Deevins/lampshop-admin-backend/internal/infra"
+	"github.com/Deevins/lampshop-admin-backend/internal/repository"
 )
 
-// AuthService описывает метод логина.
 type AuthService interface {
-	Login(username, password string) (string, error)
+	Login(ctx context.Context, username, password string) (string, error)
 }
 
-type authService struct{}
-
-// NewAuthService создаёт новый AuthService.
-func NewAuthService() AuthService {
-	return &authService{}
+type authService struct {
+	repo repository.AuthRepository
 }
 
-// Жёстко захардкоженный админ на время разработки.
-var adminUser = domain.User{
-	Username: "admin",
-	Password: "password123",
+func NewAuthService(repo repository.AuthRepository) AuthService {
+	return &authService{repo: repo}
 }
 
-func (s *authService) Login(username, password string) (string, error) {
-	if username != adminUser.Username || password != adminUser.Password {
+func (s *authService) Login(_ context.Context, username, password string) (string, error) {
+	if username != "admin" || password != "password123" {
 		return "", errors.New("invalid credentials")
 	}
-	// Генерируем JWT-токен
+
 	token, err := infra.GenerateJWT(username)
 	if err != nil {
 		return "", err
