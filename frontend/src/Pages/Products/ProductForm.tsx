@@ -49,6 +49,7 @@ const ProductForm: React.FC = () => {
         const fetchCats = async () => {
             try {
                 const cats = await getCategories();
+                console.log(cats);
                 setCategories(cats);
             } catch (err) {
                 console.error("Error fetching categories:", err);
@@ -265,7 +266,6 @@ const ProductForm: React.FC = () => {
                         />
                     </div>
 
-                    {/* Категория */}
                     <div className={styles["form-group"]}>
                         <label className={styles["form-label"]} htmlFor="category_id">
                             Категория

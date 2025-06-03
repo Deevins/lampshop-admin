@@ -1,9 +1,5 @@
 import { axiosInstance, handleResponse, BASE_URL } from "./api";
 
-export interface LoginRequest {
-    username: string;
-    password: string;
-}
 
 export interface LoginResponse {
     token: string;
