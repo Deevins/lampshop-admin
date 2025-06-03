@@ -1,15 +1,15 @@
 export interface OrderItem {
-    productId: number;
+    product_id: number;
     quantity: number;
 }
 
-export type OrderStatus = "Pending" | "Processing" | "Shipped" | "Delivered";
+export type OrderStatus = "pending" | "processing" | "shipped" | "delivered";
 
 export interface Order {
     id: number;
-    customerName: string;
+    full_name: string;
     items: OrderItem[];
-    totalPrice: number;
+    total: number;
     status: OrderStatus;
     createdAt?: string;
     updatedAt?: string;

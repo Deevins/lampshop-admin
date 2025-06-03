@@ -1,5 +1,5 @@
 import {axiosInstance, BASE_URL, handleResponse} from "./api";
-import type {Product} from "../types/Product.ts";
+import type {AttributeOption, Product} from "../types/Product.ts";
 
 export const getProducts = async (): Promise<Product[]> => {
     return handleResponse<Product[]>(
@@ -26,7 +26,7 @@ export const addProduct = async (
 };
 
 export const updateProduct = async (
-    id: number,
+    id: string,
     data: UpsertProductDTO
 ): Promise<Product> => {
     return handleResponse<Product>(
@@ -36,8 +36,18 @@ export const updateProduct = async (
     );
 };
 
-export const deleteProduct = async (id: number): Promise<void> => {
+export const deleteProduct = async (id: string): Promise<void> => {
     await handleResponse<void>(
         axiosInstance.delete(`${BASE_URL}/products/${id}`)
+    );
+};
+
+export const getAttributeOptions = async (
+    category_id: string
+): Promise<AttributeOption[]> => {
+    return handleResponse<AttributeOption[]>(
+        axiosInstance.get(
+            `${BASE_URL}/categories/${category_id}/attributes`
+        )
     );
 };

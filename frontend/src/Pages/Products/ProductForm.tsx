@@ -2,9 +2,9 @@ import React, {useEffect, useState} from "react";
 import {useNavigate, useParams} from "react-router-dom";
 
 import styles from "./ProductForm.module.scss";
-import {addProduct, getProductById, updateProduct} from "../../api/ProductApi.ts";
+import {addProduct, getAttributeOptions, getProductById, updateProduct} from "../../api/ProductApi.ts";
 import type {AttributeOption, Category} from "../../types/Product.ts";
-import {getAttributeOptions, getCategories} from "../../api/OrderApi.ts";
+import { getCategories} from "../../api/OrderApi.ts";
 
 
 interface FormState {
@@ -49,7 +49,6 @@ const ProductForm: React.FC = () => {
         const fetchCats = async () => {
             try {
                 const cats = await getCategories();
-                console.log(cats)
                 setCategories(cats);
             } catch (err) {
                 console.error("Error fetching categories:", err);
@@ -196,7 +195,7 @@ const ProductForm: React.FC = () => {
         setLoading(true);
         try {
             if (isEditMode && id) {
-                await updateProduct(Number(id), dto);
+                await updateProduct(id, dto);
             } else {
                 await addProduct(dto);
             }

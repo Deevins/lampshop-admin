@@ -1,7 +1,7 @@
 import axios, {type AxiosResponse, type InternalAxiosRequestConfig} from "axios";
 
 
-export const BASE_URL = "http://localhost:8083";
+export const BASE_URL = "admin";
 
 
 // Создаём axios-инстанс, чтобы можно было глобально настроить interceptor

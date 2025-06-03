@@ -34,7 +34,7 @@ const ProductList: React.FC = () => {
         fetchProducts();
     }, []);
 
-    const handleDelete = async (id: number) => {
+    const handleDelete = async (id: string) => {
         if (!confirm("Вы уверены, что хотите удалить этот товар?")) return;
 
         try {

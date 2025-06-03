@@ -1,14 +1,9 @@
-import React, {useEffect, useState} from "react"
+import React, {useEffect, useState} from "react";
 import styles from "./OrderList.module.scss";
 import {getOrders, updateOrderStatus} from "../../api/OrderApi.ts";
 import type {Order, OrderStatus} from "../../types/Order.ts";
 
-const statuses: OrderStatus[] = [
-    "Pending",
-    "Processing",
-    "Shipped",
-    "Delivered",
-];
+const statuses: OrderStatus[] = ["pending", "processing", "shipped", "delivered"];
 
 interface Notification {
     message: string;
@@ -24,9 +19,11 @@ const OrderList: React.FC = () => {
         visible: false,
     });
 
+    // 1) Функция для загрузки списка заказов
     const fetchOrders = async () => {
         try {
             const data = await getOrders();
+            console.log("Получили с сервера (raw orders):", data);
             setOrders(data);
         } catch (err) {
             console.error("Error fetching orders:", err);
@@ -38,10 +35,12 @@ const OrderList: React.FC = () => {
         }
     };
 
+    // 2) При маунте компонента загружаем заказы
     useEffect(() => {
         fetchOrders();
     }, []);
 
+    // 3) Автоматически скрываем уведомление через 3 секунды
     useEffect(() => {
         if (notification.visible) {
             const timer = setTimeout(() => {
@@ -51,10 +50,8 @@ const OrderList: React.FC = () => {
         }
     }, [notification.visible]);
 
-    const handleStatusChange = async (
-        orderId: number,
-        newStatus: OrderStatus
-    ) => {
+    // 4) Обработчик смены статуса конкретного заказа
+    const handleStatusChange = async (orderId: number, newStatus: OrderStatus) => {
         try {
             const updated = await updateOrderStatus(orderId, newStatus);
             if (updated) {
@@ -63,7 +60,7 @@ const OrderList: React.FC = () => {
                     type: "success",
                     visible: true,
                 });
-                fetchOrders();
+                fetchOrders(); // заново подтягиваем список
             } else {
                 setNotification({
                     message: `Не удалось обновить статус заказа #${orderId}`,
@@ -84,6 +81,7 @@ const OrderList: React.FC = () => {
     return (
         <div className={styles["orders-container"]}>
             <h2 className={styles.title}>Просмотр заказов</h2>
+
             <table className={styles.table}>
                 <thead>
                 <tr>
@@ -95,46 +93,46 @@ const OrderList: React.FC = () => {
                 </tr>
                 </thead>
                 <tbody>
-                {orders.map((order) => (
-                    <tr key={order.id}>
-                        <td className={styles.td}>{order.id}</td>
-                        <td className={styles.td}>{order.customerName}</td>
-                        <td className={styles.td}>
-                            {order.items
-                                .map((item) => `${item.productId}:${item.quantity}`)
-                                .join(", ")}
-                        </td>
-                        <td className={styles.td}>{order.totalPrice}</td>
-                        <td className={styles.td}>
-                            <select
-                                className={styles["status-select"]}
-                                value={order.status}
-                                onChange={(e) =>
-                                    handleStatusChange(
-                                        order.id,
-                                        e.target.value as OrderStatus
-                                    )
-                                }
-                            >
-                                {statuses.map((s) => (
-                                    <option key={s} value={s}>
-                                        {s}
-                                    </option>
-                                ))}
-                            </select>
-                        </td>
-                    </tr>
-                ))}
+                {/* Если orders ещё не загружены или пустой массив, .map() отработает корректно (пустой tbody) */}
+                {orders.map((order) => {
+                    // На всякий случай возьмём items как пустой массив, если он undefined
+                    const itemsArr = order.items ?? [];
+                    console.log(itemsArr)
+                    return (
+                        <tr key={order.id}>
+                            <td className={styles.td}>{order.id}</td>
+                            <td className={styles.td}>{order.full_name}</td>
+                            <td className={styles.td}>
+                                {itemsArr.length > 0
+                                    ? itemsArr.map((item) => `${item.product_id}:${item.quantity}`).join(", ")
+                                    : "-"}
+                            </td>
+                            <td className={styles.td}>{order.total}</td>
+                            <td className={styles.td}>
+                                <select
+                                    className={styles["status-select"]}
+                                    value={order.status}
+                                    onChange={(e) =>
+                                        handleStatusChange(order.id, e.target.value as OrderStatus)
+                                    }
+                                >
+                                    {statuses.map((s) => (
+                                        <option key={s} value={s}>
+                                            {s}
+                                        </option>
+                                    ))}
+                                </select>
+                            </td>
+                        </tr>
+                    );
+                })}
                 </tbody>
             </table>
 
-            {/* Всплывающее уведомление (тост) */}
             {notification.visible && (
                 <div
                     className={`${styles.notification} ${
-                        notification.type === "success"
-                            ? styles.success
-                            : styles.error
+                        notification.type === "success" ? styles.success : styles.error
                     }`}
                 >
                     {notification.message}
