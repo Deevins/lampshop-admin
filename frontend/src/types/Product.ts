@@ -1,12 +1,12 @@
 export interface Category {
-    id: string;
-    name: string;
+    ID: string;
+    Name: string;
 }
 
 export interface AttributeOption {
-    key: string;
-    label: string;
-    type: "text" | "number";
+    Key: string;
+    Label: string;
+    Type: "text" | "number";
 }
 
 export interface Product {

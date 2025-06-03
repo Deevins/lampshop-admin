@@ -49,6 +49,7 @@ const ProductForm: React.FC = () => {
         const fetchCats = async () => {
             try {
                 const cats = await getCategories();
+                console.log(cats)
                 setCategories(cats);
             } catch (err) {
                 console.error("Error fetching categories:", err);
@@ -60,7 +61,7 @@ const ProductForm: React.FC = () => {
     useEffect(() => {
         if (isEditMode && id) {
             setLoading(true);
-            getProductById(Number(id))
+            getProductById(id)
                 .then((prod) => {
                     setFormState({
                         sku: prod.sku,
@@ -99,7 +100,7 @@ const ProductForm: React.FC = () => {
                     setAttributeOptions(opts);
                     const newAttrs: Record<string, string | number> = {};
                     opts.forEach((attr) => {
-                        newAttrs[attr.key] = attr.type === "number" ? 0 : "";
+                        newAttrs[attr.Key] = attr.Type === "number" ? 0 : "";
                     });
                     setFormState((prev) => ({
                         ...prev,
@@ -124,7 +125,7 @@ const ProductForm: React.FC = () => {
                     setAttributeOptions(opts);
                     const newAttrs: Record<string, string | number> = {};
                     opts.forEach((attr) => {
-                        newAttrs[attr.key] = attr.type === "number" ? 0 : "";
+                        newAttrs[attr.Key] = attr.Type === "number" ? 0 : "";
                     });
                     setFormState((prev) => ({
                         ...prev,
@@ -280,8 +281,8 @@ const ProductForm: React.FC = () => {
                         >
                             <option value="">— Выберите категорию —</option>
                             {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>
-                                    {cat.name}
+                                <option key={cat.ID} value={cat.ID}>
+                                    {cat.Name}
                                 </option>
                             ))}
                         </select>
@@ -357,22 +358,22 @@ const ProductForm: React.FC = () => {
                             {attributeOptions.length > 0 ? (
                                 attributeOptions.map((opt) => (
                                     <div
-                                        key={opt.key}
+                                        key={opt.Key}
                                         className={styles["attribute-row"]}
                                     >
-                                        <label htmlFor={opt.key}>{opt.label}</label>
+                                        <label htmlFor={opt.Key}>{opt.Label}</label>
                                         <input
-                                            id={opt.key}
-                                            type={opt.type === "number" ? "number" : "text"}
+                                            id={opt.Key}
+                                            type={opt.Type === "number" ? "number" : "text"}
                                             value={
-                                                formState.attributes[opt.key] as string | number
+                                                formState.attributes[opt.Key] as string | number
                                             }
                                             onChange={(e) => {
                                                 const val =
-                                                    opt.type === "number"
+                                                    opt.Type === "number"
                                                         ? Number(e.target.value)
                                                         : e.target.value;
-                                                handleChangeAttribute(opt.key, val);
+                                                handleChangeAttribute(opt.Key, val);
                                             }}
                                             className={styles["form-input"]}
                                         />
