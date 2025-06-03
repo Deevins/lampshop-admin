@@ -7,7 +7,7 @@ export const getProducts = async (): Promise<Product[]> => {
     );
 };
 
-export const getProductById = async (id: number): Promise<Product> => {
+export const getProductById = async (id: string): Promise<Product> => {
     return handleResponse<Product>(
         axiosInstance.get(`${BASE_URL}/products/${id}`)
     );

@@ -14,11 +14,11 @@ export interface Product {
     sku: string;
     name: string;
     description: string;
-    categoryId: string;
-    isActive: boolean;
-    imageUrl: string;
+    category_id: string;
+    is_active: boolean;
+    image_url: string;
     price: number;
-    stockQty: number;
+    stock_qty: number;
     attributes: Record<string, string | number>;
     createdAt?: string;
     updatedAt?: string;

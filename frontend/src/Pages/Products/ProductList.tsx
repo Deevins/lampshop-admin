@@ -46,9 +46,9 @@ const ProductList: React.FC = () => {
         }
     };
 
-    const getCategoryName = (categoryId: string): string => {
-        const cat = categories.find((c) => c.id === categoryId);
-        return cat ? cat.name : categoryId;
+    const getCategoryName = (category_id: string): string => {
+        const cat = categories.find((c) => c.id === category_id);
+        return cat ? cat.name : category_id;
     };
 
     return (
@@ -84,13 +84,13 @@ const ProductList: React.FC = () => {
                         <td className={styles.td}>{prod.sku}</td>
                         <td className={styles.td}>{prod.name}</td>
                         <td className={styles.td}>
-                            {getCategoryName(prod.categoryId)}
+                            {getCategoryName(prod.category_id)}
                         </td>
                         <td className={styles.td}>{prod.price}</td>
-                        <td className={styles.td}>{prod.stockQty}</td>
+                        <td className={styles.td}>{prod.stock_qty}</td>
                         <td className={styles.td}>
                             <img
-                                src={prod.imageUrl}
+                                src={'https://santhimetaleshop.in/cdn/shop/files/Untitleddesign_26a5d7f4-82b7-4e7a-ac43-068a31086beb.png?v=1694498000\u0026width=1445'}
                                 alt={prod.name}
                                 width={60}
                                 height={60}

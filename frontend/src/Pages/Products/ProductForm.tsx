@@ -11,11 +11,11 @@ interface FormState {
     sku: string;
     name: string;
     description: string;
-    categoryId: string;
+    category_id: string;
     price: number;
-    stockQty: number;
-    imageUrl: string;
-    isActive: boolean;
+    stock_qty: number;
+    image_url: string;
+    is_active: boolean;
     attributes: Record<string, string | number>;
 }
 
@@ -33,11 +33,11 @@ const ProductForm: React.FC = () => {
         sku: "",
         name: "",
         description: "",
-        categoryId: "",
+        category_id: "",
         price: 0,
-        stockQty: 0,
-        imageUrl: "",
-        isActive: true,
+        stock_qty: 0,
+        image_url: "",
+        is_active: true,
         attributes: {},
     });
 
@@ -66,15 +66,15 @@ const ProductForm: React.FC = () => {
                         sku: prod.sku,
                         name: prod.name,
                         description: prod.description,
-                        categoryId: prod.categoryId,
+                        category_id: prod.category_id,
                         price: prod.price,
-                        stockQty: prod.stockQty,
-                        imageUrl: prod.imageUrl,
-                        isActive: prod.isActive,
+                        stock_qty: prod.stock_qty,
+                        image_url: prod.image_url,
+                        is_active: prod.is_active,
                         attributes: {...prod.attributes},
                     });
                     setProductLoaded(true);
-                    return getAttributeOptions(prod.categoryId);
+                    return getAttributeOptions(prod.category_id);
                 })
                 .then((opts) => {
                     setAttributeOptions(opts);
@@ -92,8 +92,8 @@ const ProductForm: React.FC = () => {
     useEffect(() => {
         // Если режим редактирования, но товар ещё не загружен (productLoaded=false),
         // то нужно всё равно подгрузить атрибуты для выбранной категории (если юзер сменил dropdown раньше, чем загрузился товар)
-        if (isEditMode && !productLoaded && formState.categoryId) {
-            const cid = formState.categoryId;
+        if (isEditMode && !productLoaded && formState.category_id) {
+            const cid = formState.category_id;
             getAttributeOptions(cid)
                 .then((opts) => {
                     setAttributeOptions(opts);
@@ -117,9 +117,9 @@ const ProductForm: React.FC = () => {
             return;
         }
 
-        if (!isEditMode && formState.categoryId) {
+        if (!isEditMode && formState.category_id) {
             setLoading(true);
-            getAttributeOptions(formState.categoryId)
+            getAttributeOptions(formState.category_id)
                 .then((opts) => {
                     setAttributeOptions(opts);
                     const newAttrs: Record<string, string | number> = {};
@@ -141,7 +141,7 @@ const ProductForm: React.FC = () => {
                 })
                 .finally(() => setLoading(false));
         }
-    }, [formState.categoryId, isEditMode, productLoaded]);
+    }, [formState.category_id, isEditMode, productLoaded]);
 
     const handleChangeBasic = (
         e: React.ChangeEvent<
@@ -175,7 +175,7 @@ const ProductForm: React.FC = () => {
         e.preventDefault();
         setError(null);
 
-        if (!formState.categoryId) {
+        if (!formState.category_id) {
             setError("Пожалуйста, выберите категорию");
             return;
         }
@@ -184,11 +184,11 @@ const ProductForm: React.FC = () => {
             sku: formState.sku,
             name: formState.name,
             description: formState.description,
-            categoryId: formState.categoryId,
+            category_id: formState.category_id,
             price: formState.price,
-            stockQty: formState.stockQty,
-            imageUrl: formState.imageUrl,
-            isActive: formState.isActive,
+            stock_qty: formState.stock_qty,
+            image_url: formState.image_url,
+            is_active: formState.is_active,
             attributes: formState.attributes,
         };
 
@@ -267,13 +267,13 @@ const ProductForm: React.FC = () => {
 
                     {/* Категория */}
                     <div className={styles["form-group"]}>
-                        <label className={styles["form-label"]} htmlFor="categoryId">
+                        <label className={styles["form-label"]} htmlFor="category_id">
                             Категория
                         </label>
                         <select
-                            id="categoryId"
-                            name="categoryId"
-                            value={formState.categoryId}
+                            id="category_id"
+                            name="category_id"
+                            value={formState.category_id}
                             onChange={handleChangeBasic}
                             className={styles["form-select"]}
                             required
@@ -307,14 +307,14 @@ const ProductForm: React.FC = () => {
 
                     {/* Количество на складе */}
                     <div className={styles["form-group"]}>
-                        <label className={styles["form-label"]} htmlFor="stockQty">
+                        <label className={styles["form-label"]} htmlFor="stock_qty">
                             Количество на складе
                         </label>
                         <input
-                            id="stockQty"
-                            name="stockQty"
+                            id="stock_qty"
+                            name="stock_qty"
                             type="number"
-                            value={formState.stockQty}
+                            value={formState.stock_qty}
                             onChange={handleChangeBasic}
                             className={styles["form-input"]}
                             min={0}
@@ -324,14 +324,14 @@ const ProductForm: React.FC = () => {
 
                     {/* Ссылка на изображение */}
                     <div className={styles["form-group"]}>
-                        <label className={styles["form-label"]} htmlFor="imageUrl">
+                        <label className={styles["form-label"]} htmlFor="image_url">
                             Ссылка на изображение (URL)
                         </label>
                         <input
-                            id="imageUrl"
-                            name="imageUrl"
+                            id="image_url"
+                            name="image_url"
                             type="text"
-                            value={formState.imageUrl}
+                            value={formState.image_url}
                             onChange={handleChangeBasic}
                             className={styles["form-input"]}
                         />
@@ -342,8 +342,8 @@ const ProductForm: React.FC = () => {
                         <label className={styles["form-label"]}>
                             <input
                                 type="checkbox"
-                                name="isActive"
-                                checked={formState.isActive}
+                                name="is_active"
+                                checked={formState.is_active}
                                 onChange={handleChangeBasic}
                             />{" "}
                             Активный товар
@@ -351,7 +351,7 @@ const ProductForm: React.FC = () => {
                     </div>
 
                     {/* Динамические атрибуты */}
-                    {formState.categoryId && (
+                    {formState.category_id && (
                         <div className={styles["attributes-section"]}>
                             <h3>Атрибуты для категории:</h3>
                             {attributeOptions.length > 0 ? (

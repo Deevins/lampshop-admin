@@ -17,16 +17,16 @@ const Navbar: React.FC = () => {
             <div className={styles["nav-links"]}>
                 <NavLink
                     to="/products"
-                    className={({isActive}) =>
-                        isActive ? `${styles["nav-link"]} ${styles["active"]}` : styles["nav-link"]
+                    className={({is_active}) =>
+                        is_active ? `${styles["nav-link"]} ${styles["active"]}` : styles["nav-link"]
                     }
                 >
                     Товары
                 </NavLink>
                 <NavLink
                     to="/orders"
-                    className={({isActive}) =>
-                        isActive ? `${styles["nav-link"]} ${styles["active"]}` : styles["nav-link"]
+                    className={({is_active}) =>
+                        is_active ? `${styles["nav-link"]} ${styles["active"]}` : styles["nav-link"]
                     }
                 >
                     Заказы

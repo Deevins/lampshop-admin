@@ -9,11 +9,12 @@ export const getCategories = async (): Promise<Category[]> => {
 };
 
 export const getAttributeOptions = async (
-    categoryId: string
+    category_id: string
 ): Promise<AttributeOption[]> => {
+    console.log(category_id)
     return handleResponse<AttributeOption[]>(
         axiosInstance.get(
-            `${BASE_URL}/categories/${encodeURIComponent(categoryId)}/attributes`
+            `${BASE_URL}/categories/${category_id}/attributes`
         )
     );
 };
