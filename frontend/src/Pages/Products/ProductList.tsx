@@ -47,8 +47,8 @@ const ProductList: React.FC = () => {
     };
 
     const getCategoryName = (category_id: string): string => {
-        const cat = categories.find((c) => c.id === category_id);
-        return cat ? cat.name : category_id;
+        const cat = categories.find((c) => c.ID === category_id);
+        return cat ? cat.Name : category_id;
     };
 
     return (
